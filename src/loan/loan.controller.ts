@@ -13,4 +13,13 @@ export class LoanController {
   ) {
     return this.loanService.createLoan(userid, bookid);
   }
+    @Get('all')
+  findAll() {
+    return this.loanService.findAll();
+  }
+  @Get(':id')
+  findOne(@Param('id') id: string): Loan {
+    return this.loanService.findOne(+id);
+  }
+
 }

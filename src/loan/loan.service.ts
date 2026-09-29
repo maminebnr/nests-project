@@ -16,5 +16,11 @@ export class LoanService {
 
     return loan;
   }
+  findAll(){
+        return this.loans;
+    }
+    findOne(id: number): Loan {
+       return this.loans.find(loan => loan.id === id);
+    }
 
 }
