@@ -9,10 +9,15 @@ export class BookService {
     {id:2,title:'Book 2',author:'Author 2',year:2021,price:200,quantity:200,createdAt:new Date(),updatedAt:new Date(),deletedAt:null},
     {id:3,title:'Book 3',author:'Author 3',year:2022,price:300,quantity:300,createdAt:new Date(),updatedAt:new Date(),deletedAt:null},
   ]
-  create(createBookDto: CreateBookDto) {
-    return 'This action adds a new book';
+ create(createBookDto: CreateBookDto) {
+    return {
+      id: 1,
+      ...createBookDto,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    };
   }
-
   findAll() {
     return this.books;
   }
