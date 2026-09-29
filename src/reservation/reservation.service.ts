@@ -18,7 +18,7 @@ export class ReservationService {
 
   create(createReservationDto: CreateReservationDto) {
     const bookId = Number(createReservationDto.bookId);
-    const memberName = this.parseMemberName(createReservationDto.memberName);
+    const memberName = createReservationDto.memberName.trim();
     const { startDate, endDate } = this.parseDates(
       createReservationDto.startDate,
       createReservationDto.endDate,
@@ -64,7 +64,7 @@ export class ReservationService {
 
     const memberName =
       updateReservationDto.memberName !== undefined
-        ? this.parseMemberName(updateReservationDto.memberName)
+        ? updateReservationDto.memberName.trim()
         : reservation.memberName;
     const { startDate, endDate } = this.parseDates(
       updateReservationDto.startDate ?? reservation.startDate.toISOString(),
@@ -120,12 +120,7 @@ export class ReservationService {
   }
 
   private ensureBookAvailable(bookId: number) {
-    const book = this.bookService
-      .findAll()
-      .find((b) => b.id === bookId && b.deletedAt === null);
-    if (!book) {
-      throw new NotFoundException(`Book #${bookId} not found`);
-    }
+    const book = this.bookService.findOne(bookId);
     const activeCount = this.findByBook(bookId).filter(
       (r) => r.status === ReservationStatus.ACTIVE,
     ).length;
@@ -134,21 +129,9 @@ export class ReservationService {
     }
   }
 
-  private parseMemberName(memberName: string | undefined) {
-    if (typeof memberName !== 'string' || !memberName.trim()) {
-      throw new BadRequestException('memberName is required');
-    }
-    return memberName.trim();
-  }
-
   private parseDates(start: string | undefined, end: string | undefined) {
     const startDate = new Date(start ?? '');
     const endDate = new Date(end ?? '');
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      throw new BadRequestException(
-        'startDate and endDate must be valid dates',
-      );
-    }
     if (endDate <= startDate) {
       throw new BadRequestException('endDate must be after startDate');
     }
