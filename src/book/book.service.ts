@@ -1,20 +1,40 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
-import { Book } from './entities/book.entity';
+import { Book, BookRatingSummary } from './entities/book.entity';
+
+const seed = (id: number, year: number, price: number, quantity: number): Book => ({
+  id,
+  title: `Book ${id}`,
+  author: `Author ${id}`,
+  year,
+  price,
+  quantity,
+  ratingAverage: 0,
+  ratingCount: 0,
+  weightedRating: 0,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  deletedAt: null,
+});
+
 @Injectable()
 export class BookService {
-  private books: Book[] = [
-    { id: 1, title: 'Book 1', author: 'Author 1', year: 2020, price: 100, quantity: 100, createdAt: new Date(), updatedAt: new Date(), deletedAt: null },
-    { id: 2, title: 'Book 2', author: 'Author 2', year: 2021, price: 200, quantity: 200, createdAt: new Date(), updatedAt: new Date(), deletedAt: null },
-    { id: 3, title: 'Book 3', author: 'Author 3', year: 2022, price: 300, quantity: 300, createdAt: new Date(), updatedAt: new Date(), deletedAt: null },
-  ];
+  private books: Book[] = [seed(1, 2020, 100, 100), seed(2, 2021, 200, 200), seed(3, 2022, 300, 300)];
+  private nextId = 4;
 
-  create(createBookDto: CreateBookDto) {
+  create(dto: CreateBookDto): Book {
     const now = new Date();
     const book: Book = {
-      id: Math.max(0, ...this.books.map((existingBook) => existingBook.id)) + 1,
-      ...createBookDto,
+      title: dto.title,
+      author: dto.author,
+      year: dto.year,
+      price: dto.price,
+      quantity: dto.quantity,
+      id: this.nextId++,
+      ratingAverage: 0,
+      ratingCount: 0,
+      weightedRating: 0,
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
@@ -23,29 +43,37 @@ export class BookService {
     return book;
   }
 
-  findAll() {
-    return this.books.filter((book) => book.deletedAt === null);
+  findAll(): Book[] {
+    return this.books.filter((b) => !b.deletedAt);
   }
 
-  findOne(id: number) {
-    const book = this.books.find(
-      (existingBook) => existingBook.id === id && existingBook.deletedAt === null,
-    );
-    if (!book) {
-      throw new NotFoundException(`Book #${id} not found`);
-    }
+  findOne(id: number): Book {
+    const book = this.books.find((b) => b.id === id && !b.deletedAt);
+    if (!book) throw new NotFoundException(`Book #${id} not found`);
     return book;
   }
 
-  update(id: number, updateBookDto: UpdateBookDto) {
+  /** Non-throwing lookup used by aggregations. */
+  find(id: number): Book | undefined {
+    return this.books.find((b) => b.id === id && !b.deletedAt);
+  }
+
+  update(id: number, dto: UpdateBookDto): Book {
     const book = this.findOne(id);
-    Object.assign(book, updateBookDto, { updatedAt: new Date() });
+    Object.assign(book, dto, { updatedAt: new Date() });
     return book;
   }
 
-  remove(id: number) {
+  /** Soft delete, in line with the `deletedAt` column. */
+  remove(id: number): { id: number; deleted: true } {
     const book = this.findOne(id);
     book.deletedAt = new Date();
-    return book;
+    return { id, deleted: true };
+  }
+
+  /** Called by the Review module whenever the approved reviews of a book change. */
+  setRatingSummary(id: number, summary: BookRatingSummary): void {
+    const book = this.find(id);
+    if (book) Object.assign(book, summary);
   }
 }
